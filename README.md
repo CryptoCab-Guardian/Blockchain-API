@@ -1,4 +1,4 @@
-# Steps to Deploy the Main contract
+# Steps to Deploy the contracts
 
 Used Hardhat Ignition modules that deploys that Main and Price_fixing contracts.
 
