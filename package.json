@@ -1,16 +1,25 @@
 {
-  "name": "cryptocab_guardian_wsl",
+  "name": "cryptocab_guardian",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node api/index",
+    "dev": "nodemon api/index"
   },
   "author": "Moitreyo",
   "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.2",
+    "express": "^4.19.2",
+    "morgan": "^1.10.0"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition-ethers": "^0.15.1",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.3"
+    "hardhat": "^2.22.3",
+    "nodemon": "^3.1.4"
   }
 }

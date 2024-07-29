@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-contract Escrow{
-    enum States{
+contract Escrow {
+    enum States {
         initialized,
         ongoing,
         terminated
@@ -24,17 +24,17 @@ contract Escrow{
         passengerShare = 0;
     }
 
-    function getDriverShare() public view returns (uint8){
+    function getDriverShare() public view returns (uint8) {
         return driverShare;
     }
 
-    function getEscrowBalance() public view returns(uint){
+    function getEscrowBalance() public view returns (uint) {
         return address(this).balance;
     }
 
     function disperse() public {
-        (bool sent, ) = driver.call{value:address(this).balance}(""); 
-        if(!sent){
+        (bool sent, ) = driver.call{value: address(this).balance}("");
+        if (!sent) {
             pendingPayment = true;
         }
     }

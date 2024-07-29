@@ -6,11 +6,13 @@ error notADriver(string);
 error alreadyRegistered(string);
 
 contract Main {
-    mapping(address=>address) public driverToContracts;
+    mapping(address => address) public driverToContracts;
 
-    modifier registeredDriversOnly(){
-        if(driverToContracts[msg.sender] == address(0)){
-            revert notADriver("Only registered drivers are allowed to perform this action.");
+    modifier registeredDriversOnly() {
+        if (driverToContracts[msg.sender] == address(0)) {
+            revert notADriver(
+                "Only registered drivers are allowed to perform this action."
+            );
         }
         _;
     }
@@ -18,7 +20,7 @@ contract Main {
     event ContractDeployed(address indexed newContract);
 
     function registerDriver() public {
-        if(driverToContracts[msg.sender] != address(0)){
+        if (driverToContracts[msg.sender] != address(0)) {
             revert alreadyRegistered("Driver Already registered.");
         }
         // deploy a brand new driver contract
