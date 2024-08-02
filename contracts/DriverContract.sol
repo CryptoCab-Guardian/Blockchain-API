@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 import "./Escrow.sol";
+import "./Main.sol";
 
 error notReceivingRides(string);
 error pendingRequest(string);
 error noPendingRides(string);
 error driverOnly(string);
+error userNotRequested(string, address passenger);
 
 contract DriverContract {
     enum States {
@@ -15,16 +17,21 @@ contract DriverContract {
     }
 
     struct Ride {
-        bool pending;
-        bool completed;
-        uint source;
-        uint destination;
-        //uint estimatedTripDistance; //from api
-        //uint estimatedPayment; //from Price_fixing.sol
+        uint256 rideId;
         address passenger;
-        bool cancelled;
-        // bytes32 id;
+        address driver;
+        uint256 pickupLocation;
+        uint256 destination;
+        uint256 fare;
+        bool isBooked;
+        address payable escrowContract;
+        bool confirmedByPassenger;
+        bool confirmedByDriver;
+        bool cancelledByDriver;
+        bool cancelledByPassenger;
     }
+
+    Main public immutable mainContract;
 
     address payable public driver;
     States public state;
@@ -35,99 +42,89 @@ contract DriverContract {
 
     modifier accepting() {
         if (state != States.accepting) {
-            revert notReceivingRides(
-                "currently driver is not receiving any rides."
-            );
+            revert notReceivingRides("currently driver is not receiving any rides.");
         }
         _;
     }
 
-    constructor(address _driver) {
+    constructor(address _driver, address _main) {
         driver = payable(_driver);
+        mainContract = Main(_main);
     }
 
     function setStateAccepting() public {
         state = States.accepting;
+        mainContract.insertActiveDrivers(driver);
     }
 
     function setStateInactive() external {
         state = States.inactive;
     }
 
-    //estimatedTripDuration and estimatedPayment MUST BE ADDED LATER WHEN IMPLEMENTED
-
-    function receiveRideRequest(
-        uint _src,
-        uint _dest,
-        address _pass /*,bytes32 _id*/
-    ) public accepting {
-        //check state using modifier
-        if (curr_ride.pending) {
-            revert pendingRequest("Driver has a pending request!.");
-        }
-
+    function receiveRideRequest(uint _rideId, uint _src, uint _dest) external  accepting {
         curr_ride = Ride({
-            pending: true,
-            completed: false,
-            source: _src,
+            rideId:_rideId,
+            passenger: address(0),
+            driver: driver,
+            pickupLocation: _src,
             destination: _dest,
-            passenger: _pass,
-            cancelled: false
-            //id : _id
+            fare: 0, // to be set by Main.sol
+            isBooked: false,
+            escrowContract: payable(address(0)),
+            confirmedByPassenger : false,
+            confirmedByDriver: false,
+            cancelledByDriver: false,
+            cancelledByPassenger: false
         });
     }
 
     function acceptRideRequest() public payable accepting {
-        //check state using modifier
-        if (!curr_ride.pending) {
-            revert noPendingRides(
-                "Driver does not have any pending rides! Noting to accept."
-            );
-        }
         if (msg.sender != driver) {
-            revert driverOnly("Only the driver can accept his ride.");
+            revert driverOnly("Only the owner driver can accept his ride.");
         }
         require(msg.value >= 1000000000000000000, "Provide enough ETH!!");
-        //deploy funded escrow contract
+
+
+        // Deploy funded Escrow contract
         curr_escrow = new Escrow{value: msg.value}(driver, curr_ride.passenger);
-        //FIX THE CORRECT VALUE LATER. CURRENT VALUE (1 ETH) IS FOR TESTING PURPOSES ONLY !!!!!!!
+
+        curr_ride.confirmedByDriver= true;
+        curr_ride.escrowContract= payable(address(curr_escrow));
+
+        mainContract.acceptRideDriver(curr_ride.rideId, driver, address(curr_escrow));
+
+        emit RideAcceptedByDriver(curr_ride.pickupLocation, address(curr_escrow));
     }
 
-    function terminateOngoingRide() public {
-        setStateAccepting();
-        curr_ride.pending = false;
-        curr_ride.completed = true;
-        //receive payment from Escrow contract
-        // (bool sent, ) = driver.call{value:address(curr_escrow).balance}("");
-        //bool sent = driver.send(address(curr_escrow).balance);
-        // if(!sent){
-        //     pendingPaymentEscrowAddress = address(curr_escrow);
-        // }
-        curr_escrow.disperse();
-        rides.push(curr_ride);
-        resetCurrentRide();
+    function acceptedByUser(uint256 rideId) external {
+        require(rideId == curr_ride.rideId, "wrong ride");
+        curr_ride.confirmedByPassenger = true;
     }
 
-    //might be required later for assigning ride id. Current plan is to pass to from api
-    function generateId() private view returns (bytes32) {
-        bytes32 blockHash = blockhash(block.number - 1); // Get the block hash of the previous block
-        bytes32 id = keccak256(
-            abi.encodePacked(blockHash, block.timestamp, driver)
-        );
-        return id;
+    
+
+    // function terminateOngoingRide() public {
+    //     setStateAccepting();
+    //     curr_ride.completed = true;
+    //     curr_escrow.disperse();
+    //     rides.push(curr_ride);
+    //     resetCurrentRide();
+    // }
+
+    function fetchCurrentRideDetails(
+        
+    ) public view returns (Ride memory) {
+        return (curr_ride);
     }
 
-    function fetchCurrentRideDetails() public view returns (Ride memory) {
-        return curr_ride;
-    }
+    // function resetCurrentRide() public {
+    //     curr_ride.pending = false;
+    //     curr_ride.completed = false;
+    //     curr_ride.source = 0;
+    //     curr_ride.destination = 0;
+    //     curr_ride.passenger = address(0);
+    // }
 
-    function resetCurrentRide() public {
-        curr_ride.pending = false;
-        curr_ride.completed = false;
-        curr_ride.source = 0;
-        curr_ride.destination = 0;
-        curr_ride.passenger = address(0);
-    }
     function getDriverBalance() public view returns (uint) {
         return address(driver).balance;
     }
@@ -135,4 +132,6 @@ contract DriverContract {
     function getEscrowBalance() public view returns (uint) {
         return address(curr_escrow).balance;
     }
+
+    event RideAcceptedByDriver(uint indexed source, address indexed escrowContract);
 }

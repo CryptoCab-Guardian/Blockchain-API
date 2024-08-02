@@ -8,11 +8,11 @@ contract Escrow {
         terminated
     }
 
-    address public driver; //default visibility is internal
+    address public driver;
     address public passenger;
     uint public balance;
-    uint8 public driverShare; //in range of 0 to 1
-    uint8 public passengerShare; //in range of 0 to 1
+    uint8 public driverShare;
+    uint8 public passengerShare;
     States public state;
     bool public pendingPayment;
 
@@ -22,6 +22,22 @@ contract Escrow {
         balance = msg.value;
         driverShare = 1;
         passengerShare = 0;
+        state = States.initialized;
+    }
+
+    function fund() public payable {
+        require(state == States.initialized || state == States.ongoing, "Cannot fund in current state");
+        balance += msg.value;
+        state = States.ongoing;
+    }
+
+    function disperse() public {
+        require(state == States.ongoing, "Escrow must be in ongoing state to disperse funds");
+        (bool sent, ) = driver.call{value: address(this).balance}("");
+        if (!sent) {
+            pendingPayment = true;
+        }
+        state = States.terminated;
     }
 
     function getDriverShare() public view returns (uint8) {
@@ -30,12 +46,5 @@ contract Escrow {
 
     function getEscrowBalance() public view returns (uint) {
         return address(this).balance;
-    }
-
-    function disperse() public {
-        (bool sent, ) = driver.call{value: address(this).balance}("");
-        if (!sent) {
-            pendingPayment = true;
-        }
     }
 }

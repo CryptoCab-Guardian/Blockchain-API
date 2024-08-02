@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-error notADriver(string);
+error _notADriver(string);
 error negativePrice(string);
 error alreadyCastedPrice(string);
 error intermittentContractState(string);
 error ongoingContractState(string);
 error didNotCastBefore(string);
 error noFeedsCastedYet(string description);
-error alreadyRegistered(string);
+error _alreadyRegistered(string);
 
 contract Price_fixing {
     enum State {
@@ -24,7 +24,7 @@ contract Price_fixing {
 
     modifier registeredDriversOnly() {
         if (drivers[msg.sender] != true) {
-            revert notADriver(
+            revert _notADriver(
                 "Only registered drivers are allowed to cast a price view."
             );
         }
@@ -43,7 +43,7 @@ contract Price_fixing {
     //For testing purposes only
     function registerDriver() public {
         if (drivers[msg.sender] == true) {
-            revert alreadyRegistered("Driver Already registered.");
+            revert _alreadyRegistered("Driver Already registered.");
         }
         drivers[msg.sender] = true;
     }
