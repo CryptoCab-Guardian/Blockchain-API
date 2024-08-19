@@ -1,11 +1,12 @@
-const express = require('express')
-const cors = require('cors')
-const morgan = require('morgan')
+import express from 'express'
+import cors from 'cors'
+import morgan from 'morgan'
+import dotenv from 'dotenv'
 
-require('dotenv').config()
+dotenv.config()
 
 
-const { router: mainContractRouter } = require('../router/main.route')
+import mainContractRouter from './router/main.route'
 
 
 const app = express()
