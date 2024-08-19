@@ -78,6 +78,7 @@ contract Main {
         // deploy a brand new driver contract
         driverToContracts[msg.sender] = address(new DriverContract(msg.sender, address(this)));
     }
+    
     function registerUser() public {
         if(userToContracts[msg.sender] != address(0)){
             revert alreadyRegistered("User Already registered.");
